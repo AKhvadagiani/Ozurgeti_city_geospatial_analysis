@@ -4,6 +4,8 @@ import re
 from rapidfuzz import fuzz
 import string
 
+# The project was originally generated in notebook format. This is the script version.
+
 data =pd.read_excel('Ozurgeti.xlsx')
 
 # Columns of interest
@@ -111,3 +113,5 @@ data.loc[:, 'ქუჩა_საბოლოო'] = data['ქუჩა_საბ
 data.loc[:,'St_Full_Name']=data['ნომერი'] + ' ' + data['ქუჩა_საბოლოო'] + ' ქუჩა, Ozurgeti, Georgia'
 
 data.drop(columns=['პირადი ნომერი','დაბის/თემის/სოფლის საკრებულო (ფაქტობრივი)','ფაქტობრივი მისამართი','ნომერი','ქუჩა','ქუჩა_OPS','similarity_score','matched_street','ქუჩა_საბოლოო'])
+
+print(data.head(10))
