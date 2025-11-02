@@ -4,3 +4,4 @@ openpyxl
 folium
 geopandas
 scikit-learn
+matplotlib
