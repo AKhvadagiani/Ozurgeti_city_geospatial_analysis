@@ -94,7 +94,6 @@ class AddressMatcher:
                 lambda x: x.replace('ქუჩა', '').strip() if isinstance(x, str) and 'ქუჩა' in x.split() else x
             )
 
-            # FIX: Use self.exclude_patterns instead of self.exclude_patterns
             streets = streets[~streets['street_name'].str.contains(self.exclude_patterns, regex=True, na=False)]
 
             print(f"Loaded {len(streets)} street names")
@@ -182,7 +181,6 @@ class AddressMatcher:
 
         street_name = street_name.strip()
 
-        # Check for exact matches or partial matches
         for ops_street in self.ops_streets['street_name']:
             if (isinstance(ops_street, str) and
                     street_name in ops_street.split() and
@@ -204,7 +202,6 @@ class AddressMatcher:
 
             print(f"Extracted street names and numbers from {len(self.data)} addresses")
 
-            # Remove empty entries
             initial_count = len(self.data)
             self.data = self.data[
                 (self.data['ქუჩა'] != '') &
@@ -213,7 +210,6 @@ class AddressMatcher:
 
             print(f"Removed {initial_count - len(self.data)} empty entries")
 
-            # Sort by street name
             self.data = self.data.sort_values(by='ქუჩა', ascending=True)
 
             # Match with OPS streets
@@ -229,7 +225,6 @@ class AddressMatcher:
                 index=self.data.index
             )
 
-            # Final street assignment based on similarity threshold
             self.data['ქუჩა_საბოლოო'] = self.data.apply(
                 lambda row: row['matched_street'] if row['similarity_score'] > 90 else row['ქუჩა_OPS'],
                 axis=1
@@ -290,25 +285,20 @@ def main():
     try:
         print("Initializing Address Matcher...")
 
-        # Initialize the address matcher
         matcher = AddressMatcher('ozurgeti.xlsx', 'ozurgeti_streets.txt')
 
-        # Check if data was loaded successfully
         if matcher.data.empty:
             print("Error: No data loaded. Please check your input files.")
             return pd.DataFrame()
 
-        # Process addresses
         result = matcher.process_addresses()
 
         if not result.empty:
-            # Display results
             print(f"\nProcessing completed successfully!")
             print(f"Final dataset contains {len(result)} addresses")
             print("\nFirst few results:")
             print(result[['საიდენტიფიკაციო ნომერი', 'St_Full_Name']].head())
 
-            # Save results
             matcher.save_results('ozurgeti_street_with_fuzzy.xlsx')
             return result
         else:

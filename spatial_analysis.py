@@ -10,9 +10,6 @@ from io import BytesIO
 import numpy as np
 
 
-# ======================
-# 1. Load and prepare data
-# ======================
 @st.cache_data
 def load_data():
     data = pd.read_excel("ozurgeti_dataset_coordinates_filtered.xlsx")
@@ -22,7 +19,6 @@ def load_data():
     data[['Code1', 'Code2', 'Code3']] = data['საქმიანობის კოდი NACE Rev.2'].str.split('.', expand=True)
     data.drop(columns=['Code2', 'Code3'], inplace=True)
 
-    # Merge with NACE Rev.2 descriptions
     nace_rev2['Rev 2.1 code'] = nace_rev2['Rev 2.1 code'].astype(str)
     data = data.merge(
         nace_rev2,
@@ -46,9 +42,6 @@ def load_data():
 gdf = load_data()
 
 
-# ======================
-# 2. Helper functions
-# ======================
 def get_neighborhood_profile(store_id, gdf, radius=30):
     store = gdf[gdf['საიდენტიფიკაციო ნომერი'] == store_id].iloc[0]
     center = store.geometry
@@ -120,7 +113,7 @@ def find_most_similar_neighborhood(target_id, gdf, profiles_df, radius=30):
     # Calculate similarity with all stores outside the neighborhood
     similarities = {}
     for store_id in stores_outside['საიდენტიფიკაციო ნომერი']:
-        if store_id != target_id:  # Double check
+        if store_id != target_id:
             other_profile = profiles_df.loc[store_id]
             similarity = cosine_similarity([target_profile], [other_profile])[0][0]
             similarities[store_id] = similarity
@@ -141,9 +134,6 @@ def folium_static(map_object, width=700, height=500):
     html(map_html, width=width, height=height)
 
 
-# ======================
-# 3. Streamlit UI
-# ======================
 st.title("🗺️ Neighborhood Similarity Explorer")
 
 radius = st.slider("Neighborhood radius (meters):", 10, 100, 30, step=5)
@@ -161,16 +151,14 @@ most_similar_id, similarity_score, all_similarities = find_most_similar_neighbor
 if most_similar_id is None:
     st.stop()
 
-# ======================
-# 4. Map visualization
-# ======================
+
 target_store = gdf[gdf['საიდენტიფიკაციო ნომერი'] == target_id].iloc[0]
 similar_store = gdf[gdf['საიდენტიფიკაციო ნომერი'] == most_similar_id].iloc[0]
 
 # Get target neighborhood boundary for visualization
 _, target_buffer = get_neighborhood_profile(target_id, gdf, radius)
 
-# Create map
+# Folium map
 m = folium.Map(
     location=[gdf['Long'].mean(), gdf['Lat'].mean()],
     tiles='CartoDB positron',
@@ -187,7 +175,7 @@ folium.GeoJson(
 # Add all stores as background context
 for idx, row in gdf.iterrows():
     if row['საიდენტიფიკაციო ნომერი'] == target_id:
-        # Target store - use red marker
+
         folium.Marker(
             location=[row['Long'], row['Lat']],
             popup=f"ID: {row['საიდენტიფიკაციო ნომერი']}<br>Name: {row['Name']}",
@@ -195,7 +183,7 @@ for idx, row in gdf.iterrows():
             icon=folium.Icon(color='red', icon='info-sign')
         ).add_to(m)
     elif row['საიდენტიფიკაციო ნომერი'] == most_similar_id:  # FIXED: removed ,'Name'
-        # Most similar store - use blue marker
+
         folium.Marker(
             location=[row['Long'], row['Lat']],
             popup=f"ID: {row['საიდენტიფიკაციო ნომერი']}<br>Name: {row['Name']}",
@@ -203,7 +191,7 @@ for idx, row in gdf.iterrows():
             icon=folium.Icon(color='blue', icon='info-sign')
         ).add_to(m)
     else:
-        # Other stores - use gray circle marker
+
         folium.CircleMarker(
             location=[row['Long'], row['Lat']],
             radius=3,
@@ -219,15 +207,13 @@ st.subheader("Map of Target and Most Similar Neighborhood")
 st.write("Red circle: Target neighborhood boundary | Red dot: Target store | Blue dot: Most similar store")
 folium_static(m, width=750, height=500)
 
-# ======================
-# 5. Composition comparison plot
-# ======================
+
 st.subheader("Neighborhood Composition Comparison")
 
 target_profile, _ = get_neighborhood_profile(target_id, gdf, radius=radius)
 similar_profile, _ = get_neighborhood_profile(most_similar_id, gdf, radius=radius)
 
-# Create comparison DataFrame with consistent categories
+
 all_categories = list(set(target_profile.index) | set(similar_profile.index))
 comparison_data = {
     'Target Store': [target_profile.get(cat, 0) for cat in all_categories],
@@ -244,7 +230,7 @@ ax.tick_params(axis='x', rotation=90, labelsize=8)
 plt.tight_layout()
 st.pyplot(fig)
 
-# Display store information
+
 st.subheader("Store Information")
 col1, col2 = st.columns(2)
 
@@ -263,14 +249,13 @@ with col2:
     st.write(f"Similarity Score: {similarity_score:.4f}")
     st.write(f"Distance from target: {target_store.geometry.distance(similar_store.geometry) * 111000:.1f} meters")
 
-# Debug information - FIXED: Now using the same similarity calculations
+# Debug information
 with st.expander("Debug Information"):
     stores_outside = get_stores_outside_neighborhood(target_id, gdf, radius)
     st.write(f"Total stores in dataset: {len(gdf)}")
     st.write(f"Stores in target neighborhood: {len(gdf) - len(stores_outside)}")
     st.write(f"Stores outside target neighborhood: {len(stores_outside)}")
 
-    # Show top 10 similar stores using the SAME similarity calculations
     st.write("Top 10 similar stores outside neighborhood:")
 
     # Get top similar stores from the pre-calculated similarities
